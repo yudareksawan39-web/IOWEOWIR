@@ -6,7 +6,7 @@ body {
     margin: 0;
     padding: 20px;
     font-family: Arial, sans-serif;
-    background: #f5f5f5;
+    background: #0054d3;
     color: #111;
 }
 
@@ -207,4 +207,47 @@ button {
 
 .earth-button:active {
     transform: scale(0.97);
+}
+.prayer-card {
+    margin-top: 25px;
+    padding: 20px;
+    border-radius: 15px;
+    background: #151515;
+    color: white;
+}
+
+.prayer-card h2 {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.clock {
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.prayer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prayer-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 15px;
+    border-radius: 8px;
+    background: #222;
+}
+
+.prayer-item span:last-child {
+    font-weight: bold;
+}
+
+#nextPrayer {
+    text-align: center;
+    margin-top: 18px;
+    font-weight: bold;
 }
