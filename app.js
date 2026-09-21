@@ -1,139 +1,77 @@
-// ==========================================
-// KOORDINAT KA'BAH
-// ==========================================
-
 const KAABAH_LAT = 21.422487;
 const KAABAH_LON = 39.826206;
 
-
-// ==========================================
-// ELEMEN HTML
-// ==========================================
-
-const startButton =
-    document.getElementById("startButton");
-
-const latitudeElement =
-    document.getElementById("latitude");
-
-const longitudeElement =
-    document.getElementById("longitude");
-
-const accuracyElement =
-    document.getElementById("accuracy");
-
-const headingElement =
-    document.getElementById("heading");
-
-const qiblaElement =
-    document.getElementById("qibla");
-
-const differenceElement =
-    document.getElementById("difference");
-
-const distanceElement =
-    document.getElementById("distance");
-
-const statusElement =
-    document.getElementById("status");
-
-const arrowElement =
-    document.getElementById("arrow");
-
-
-// ==========================================
-// VARIABEL
-// ==========================================
-
 let qiblaAzimuth = null;
 let currentHeading = null;
-let gpsWatchId = null;
+let absoluteSensorDetected = false;
 
 
-// ==========================================
-// KONVERSI
-// ==========================================
+// ===============================
+// FUNGSI MATEMATIKA
+// ===============================
 
-function toRadians(degrees) {
-    return degrees * Math.PI / 180;
+function toRadians(deg) {
+    return deg * Math.PI / 180;
+}
+
+function toDegrees(rad) {
+    return rad * 180 / Math.PI;
+}
+
+function normalizeAngle(angle) {
+    return (angle + 360) % 360;
 }
 
 
-function toDegrees(radians) {
-    return radians * 180 / Math.PI;
-}
+// ===============================
+// HITUNG ARAH KIBLAT
+// ===============================
 
+function calculateQibla(lat, lon) {
 
-// ==========================================
-// HITUNG AZIMUT KIBLAT
-// ==========================================
-
-function calculateQibla(latitude, longitude) {
-
-    const lat1 = toRadians(latitude);
+    const lat1 = toRadians(lat);
     const lat2 = toRadians(KAABAH_LAT);
 
-    const deltaLongitude =
-        toRadians(KAABAH_LON - longitude);
+    const deltaLon =
+        toRadians(KAABAH_LON - lon);
 
     const y =
-        Math.sin(deltaLongitude);
+        Math.sin(deltaLon) * Math.cos(lat2);
 
     const x =
-        Math.cos(lat1) *
-        Math.tan(lat2)
-        -
+        Math.cos(lat1) * Math.sin(lat2) -
         Math.sin(lat1) *
-        Math.cos(deltaLongitude);
+        Math.cos(lat2) *
+        Math.cos(deltaLon);
 
-    let azimuth =
-        toDegrees(
-            Math.atan2(y, x)
-        );
+    let bearing =
+        toDegrees(Math.atan2(y, x));
 
-    azimuth =
-        (azimuth + 360) % 360;
+    bearing = normalizeAngle(bearing);
 
-    return azimuth;
+    return bearing;
 }
 
 
-// ==========================================
-// HITUNG JARAK
-// ==========================================
+// ===============================
+// HITUNG JARAK KE KA'BAH
+// ===============================
 
-function calculateDistance(latitude, longitude) {
+function calculateDistance(lat1, lon1, lat2, lon2) {
 
     const R = 6371;
 
-    const lat1 =
-        toRadians(latitude);
-
-    const lat2 =
-        toRadians(KAABAH_LAT);
-
-    const deltaLatitude =
-        toRadians(
-            KAABAH_LAT - latitude
-        );
-
-    const deltaLongitude =
-        toRadians(
-            KAABAH_LON - longitude
-        );
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
 
     const a =
-        Math.sin(deltaLatitude / 2) ** 2
-        +
-        Math.cos(lat1)
-        *
-        Math.cos(lat2)
-        *
-        Math.sin(deltaLongitude / 2) ** 2;
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) ** 2;
 
     const c =
-        2 *
-        Math.atan2(
+        2 * Math.atan2(
             Math.sqrt(a),
             Math.sqrt(1 - a)
         );
@@ -142,112 +80,73 @@ function calculateDistance(latitude, longitude) {
 }
 
 
-// ==========================================
-// NORMALISASI SUDUT
-// ==========================================
-
-function normalizeAngle(angle) {
-
-    return (
-        (angle + 540) % 360
-    ) - 180;
-
-}
-
-
-// ==========================================
-// UPDATE POSISI GPS
-// ==========================================
+// ===============================
+// GPS
+// ===============================
 
 function updateGPS(position) {
 
-    const latitude =
-        position.coords.latitude;
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+    const accuracy = position.coords.accuracy;
 
-    const longitude =
-        position.coords.longitude;
+    document.getElementById("latitude").textContent =
+        lat.toFixed(6) + "°";
 
-    const accuracy =
-        position.coords.accuracy;
+    document.getElementById("longitude").textContent =
+        lon.toFixed(6) + "°";
 
-
-    // Tampilkan koordinat
-
-    latitudeElement.textContent =
-        latitude.toFixed(6) + "°";
-
-    longitudeElement.textContent =
-        longitude.toFixed(6) + "°";
-
-    accuracyElement.textContent =
-        "± " +
-        accuracy.toFixed(1) +
-        " m";
+    document.getElementById("accuracy").textContent =
+        "± " + accuracy.toFixed(1) + " m";
 
 
-    // Hitung azimut
+    // HITUNG KIBLAT
 
     qiblaAzimuth =
-        calculateQibla(
-            latitude,
-            longitude
-        );
+        calculateQibla(lat, lon);
+
+    document.getElementById("qibla").textContent =
+        qiblaAzimuth.toFixed(1) + "°";
 
 
-    qiblaElement.textContent =
-        qiblaAzimuth.toFixed(2) + "°";
-
-
-    // Hitung jarak
+    // HITUNG JARAK
 
     const distance =
         calculateDistance(
-            latitude,
-            longitude
+            lat,
+            lon,
+            KAABAH_LAT,
+            KAABAH_LON
         );
 
-
-    distanceElement.textContent =
-        distance.toFixed(2) + " km";
-
-
-    updateCompass();
-
-    statusElement.textContent =
-        "GPS aktif.";
-}
+    document.getElementById("distance").textContent =
+        distance.toFixed(1) + " km";
 
 
-// ==========================================
-// UPDATE KOMPAS
-// ==========================================
-
-function updateCompass(heading) {
-
-    currentHeading = heading;
-
-    document.getElementById("heading").textContent =
-        heading.toFixed(1) + "°";
-
-    if (qiblaAzimuth !== null) {
-
-        const difference =
-            normalizeAngle(qiblaAzimuth - heading);
-
-        document.getElementById("difference").textContent =
-            difference.toFixed(1) + "°";
-
-        const needle =
-            document.getElementById("needle");
-
-        needle.style.transform =
-            `rotate(${difference}deg)`;
+    // Jika sensor sudah aktif
+    if (currentHeading !== null) {
+        updateNeedle();
     }
+
+    document.getElementById("status").textContent =
+        "GPS aktif. Menunggu arah kompas...";
 }
 
-// ==========================================
-// SENSOR ORIENTASI
-// ==========================================
+
+// ===============================
+// ERROR GPS
+// ===============================
+
+function gpsError(error) {
+
+    document.getElementById("status").textContent =
+        "GPS error: " + error.message;
+}
+
+
+// ===============================
+// KOMPAS / SENSOR HP
+// ===============================
 
 function handleOrientation(event) {
 
@@ -255,10 +154,9 @@ function handleOrientation(event) {
 
 
     // iPhone / Safari
-
     if (
-        typeof event.webkitCompassHeading ===
-        "number"
+        typeof event.webkitCompassHeading === "number" &&
+        !isNaN(event.webkitCompassHeading)
     ) {
 
         heading =
@@ -266,54 +164,132 @@ function handleOrientation(event) {
 
     }
 
-
-    // Browser lain
-
+    // Sensor absolut
     else if (
+        event.absolute === true &&
         typeof event.alpha === "number"
     ) {
 
         heading =
             360 - event.alpha;
 
+        absoluteSensorDetected = true;
+    }
+
+    // Sensor biasa sebagai cadangan
+    else if (
+        !absoluteSensorDetected &&
+        typeof event.alpha === "number"
+    ) {
+
+        heading =
+            360 - event.alpha;
     }
 
 
-    if (heading !== null) {
-
-        currentHeading =
-            (heading + 360) % 360;
-
-        updateCompass();
-
+    if (heading === null) {
+        return;
     }
+
+
+    heading = normalizeAngle(heading);
+
+    currentHeading = heading;
+
+
+    // Tampilkan arah HP
+    const headingElement =
+        document.getElementById("heading");
+
+    if (headingElement) {
+        headingElement.textContent =
+            heading.toFixed(1) + "°";
+    }
+
+
+    updateNeedle();
 }
 
 
-// ==========================================
-// MEMULAI KOMPAS
-// ==========================================
+// ===============================
+// GERAKKAN JARUM
+// ===============================
+
+function updateNeedle() {
+
+    if (
+        qiblaAzimuth === null ||
+        currentHeading === null
+    ) {
+        return;
+    }
+
+
+    // Selisih arah kiblat dengan arah HP
+
+    const difference =
+        normalizeAngle(
+            qiblaAzimuth - currentHeading
+        );
+
+
+    // Tampilkan selisih
+
+    const differenceElement =
+        document.getElementById("difference");
+
+    if (differenceElement) {
+
+        let displayDifference = difference;
+
+        if (displayDifference > 180) {
+            displayDifference =
+                displayDifference - 360;
+        }
+
+        differenceElement.textContent =
+            displayDifference.toFixed(1) + "°";
+    }
+
+
+    // GERAKKAN JARUM
+
+    const needle =
+        document.getElementById("needle");
+
+    if (needle) {
+
+        needle.style.transform =
+            `rotate(${difference}deg)`;
+    }
+
+
+    document.getElementById("status").textContent =
+        "Kompas aktif — arahkan jarum ke kiblat.";
+}
+
+
+// ===============================
+// MULAI KOMPAS
+// ===============================
 
 async function startCompass() {
 
     try {
 
-        // Beberapa browser meminta izin sensor
+        // iPhone / browser yang membutuhkan izin
 
         if (
-            typeof DeviceOrientationEvent !==
-            "undefined" &&
-            typeof DeviceOrientationEvent.requestPermission ===
-            "function"
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
         ) {
 
             const permission =
-                await DeviceOrientationEvent
-                    .requestPermission(true);
+                await DeviceOrientationEvent.requestPermission(true);
 
             if (permission !== "granted") {
 
-                statusElement.textContent =
+                document.getElementById("status").textContent =
                     "Izin sensor kompas ditolak.";
 
                 return;
@@ -321,6 +297,7 @@ async function startCompass() {
         }
 
 
+        // Sensor absolut
         window.addEventListener(
             "deviceorientationabsolute",
             handleOrientation,
@@ -328,6 +305,7 @@ async function startCompass() {
         );
 
 
+        // Sensor umum
         window.addEventListener(
             "deviceorientation",
             handleOrientation,
@@ -335,75 +313,60 @@ async function startCompass() {
         );
 
 
-        statusElement.textContent =
-            "Sensor kompas aktif.";
-
+        document.getElementById("status").textContent =
+            "Sensor kompas aktif. Putar HP perlahan...";
     }
 
     catch (error) {
 
-        statusElement.textContent =
-            "Sensor kompas gagal: " +
-            error.message;
-
+        document.getElementById("status").textContent =
+            "Sensor kompas tidak dapat digunakan.";
+        
+        console.error(error);
     }
 }
 
 
-// ==========================================
+// ===============================
 // MULAI GPS
-// ==========================================
+// ===============================
 
 function startGPS() {
 
     if (!navigator.geolocation) {
 
-        statusElement.textContent =
-            "GPS tidak tersedia di browser.";
+        document.getElementById("status").textContent =
+            "Browser tidak mendukung GPS.";
 
         return;
     }
 
 
-    gpsWatchId =
-        navigator.geolocation.watchPosition(
-
-            updateGPS,
-
-            function(error) {
-
-                statusElement.textContent =
-                    "GPS gagal: " +
-                    error.message;
-
-            },
-
-            {
-                enableHighAccuracy: true,
-
-                maximumAge: 0,
-
-                timeout: 15000
-            }
-        );
+    navigator.geolocation.watchPosition(
+        updateGPS,
+        gpsError,
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 15000
+        }
+    );
 }
 
 
-// ==========================================
+// ===============================
 // TOMBOL MULAI
-// ==========================================
+// ===============================
 
-startButton.addEventListener(
-    "click",
-    async function() {
+document
+    .getElementById("startButton")
+    .addEventListener("click", async function () {
 
-        statusElement.textContent =
+        document.getElementById("status").textContent =
             "Memulai GPS dan kompas...";
-
-
-        await startCompass();
 
         startGPS();
 
-    }
-);
+        await startCompass();
+
+    });
