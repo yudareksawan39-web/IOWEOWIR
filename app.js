@@ -370,3 +370,15 @@ document
         await startCompass();
 
     });
+document.getElementById("earthButton").addEventListener("click", function () {
+
+    if (currentLatitude === null || currentLongitude === null) {
+        alert("Lokasi GPS belum tersedia. Jalankan GPS terlebih dahulu.");
+        return;
+    }
+
+    const earthURL =
+        `https://earth.google.com/web/@${currentLatitude},${currentLongitude},1000a,0d,35y,0h,0t,0r`;
+
+    window.location.href = earthURL;
+});
