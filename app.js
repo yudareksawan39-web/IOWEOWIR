@@ -4,6 +4,8 @@ const KAABAH_LON = 39.826206;
 let qiblaAzimuth = null;
 let currentHeading = null;
 let absoluteSensorDetected = false;
+let currentLatitude = null;
+let currentLongitude = null;
 
 
 // ===============================
@@ -89,6 +91,8 @@ function updateGPS(position) {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
     const accuracy = position.coords.accuracy;
+    currentLatitude = lat;
+currentLongitude = lon;
 
     document.getElementById("latitude").textContent =
         lat.toFixed(6) + "°";
@@ -378,7 +382,8 @@ document.getElementById("earthButton").addEventListener("click", function () {
     }
 
     const earthURL =
-        `https://earth.google.com/web/@${currentLatitude},${currentLongitude},1000a,0d,35y,0h,0t,0r`;
+        "https://earth.google.com/web/search/" +
+        currentLatitude + "," + currentLongitude;
 
-    window.location.href = earthURL;
+    window.open(earthURL, "_blank");
 });
